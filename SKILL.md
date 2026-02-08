@@ -1,55 +1,50 @@
 ---
 name: msgraph
-description: Access Microsoft OneNote notebooks — read, create, and update notes via Microsoft Graph API
+description: Access Microsoft OneNote notebooks — read, create, and update notes via Microsoft Graph API. Use when the user mentions OneNote, notebooks, notes, Microsoft notes, or wants to read/create/edit OneNote content.
 ---
 
 # Microsoft Graph — OneNote
 
-Kit can access the user's Microsoft OneNote notebooks through the Microsoft Graph API. This skill enables reading, creating, and updating OneNote notebooks, sections, and pages. All content is converted between OneNote HTML and Markdown automatically.
-
-## Prerequisites
-
-Before using OneNote commands, the user must have:
-
-1. An Azure app registration configured (see `references/azure-setup.md` in the msgraph repo)
-2. A `.env` file in the msgraph repo with `MSGRAPH_CLIENT_ID` set
-3. Completed authentication via the device code flow
-
-If the user has not authenticated yet, run the auth login script first.
+Access the user's Microsoft OneNote notebooks through lightweight HTTP calls to the Microsoft Graph API. All content is converted between OneNote HTML and Markdown automatically.
 
 ## Script Location
-
-All scripts are in the msgraph repo. Use this base path:
 
 ```
 MSGRAPH_DIR="/home/bneradt/openclaw/skills/msgraph"
 ```
 
-Scripts use the repo's `.venv` Python. Always invoke scripts with:
+Always invoke scripts with the venv Python:
 
 ```bash
 $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/<script>.py"
 ```
 
+## Known Notebooks
+
+| Notebook | ID | Shared |
+|----------|----|--------|
+| Family | `0-F45FC9EC7A91390E!107541` | Yes |
+| Family Notebook | `0-F45FC9EC7A91390E!111630` | Yes |
+| Personal | `0-F45FC9EC7A91390E!107482` | No |
+| Religious | `0-F45FC9EC7A91390E!106680` | No |
+
+Use these IDs to skip the list-notebooks step when the user references a known notebook.
+
 ## Authentication
 
-### Check auth status
+Auth is already configured. If a script returns an auth error, check status first:
 
 ```bash
 $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/auth_status.py"
 ```
 
-Returns JSON: `{"authenticated": true, "username": "...", ...}` or `{"authenticated": false, "reason": "..."}`.
-
-### Log in (device code flow)
+If re-auth is needed:
 
 ```bash
 $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/auth_login.py"
 ```
 
-Prints a URL and code to stderr. Tell the user to open the URL in their browser and enter the code. The script prints JSON with the authenticated username on success. Tokens are cached persistently — subsequent commands authenticate silently.
-
-Always check auth status before running OneNote commands. If not authenticated, run the login script first and wait for the user to complete the browser flow.
+Prints a URL and device code to stderr — tell the user to open the URL and enter the code.
 
 ## OneNote Operations
 
@@ -59,15 +54,11 @@ Always check auth status before running OneNote commands. If not authenticated, 
 $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_list_notebooks.py"
 ```
 
-Returns JSON array of notebooks with `id`, `displayName`, `createdDateTime`, `lastModifiedDateTime`.
-
 ### List sections in a notebook
 
 ```bash
 $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_list_sections.py" --notebook-id "NOTEBOOK_ID"
 ```
-
-Returns JSON array of sections with `id`, `displayName`, `createdDateTime`.
 
 ### List pages in a section
 
@@ -75,15 +66,13 @@ Returns JSON array of sections with `id`, `displayName`, `createdDateTime`.
 $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_list_pages.py" --section-id "SECTION_ID"
 ```
 
-Returns JSON array of pages with `id`, `title`, `createdDateTime`, `lastModifiedDateTime`.
-
 ### Read a page
 
 ```bash
 $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_read_page.py" --page-id "PAGE_ID"
 ```
 
-Returns JSON with page metadata plus a `content` field containing the page body as Markdown.
+Returns JSON with page metadata and a `content` field as Markdown.
 
 ### Create a notebook
 
@@ -91,15 +80,11 @@ Returns JSON with page metadata plus a `content` field containing the page body 
 $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_create_notebook.py" --name "My Notebook"
 ```
 
-Returns JSON with the new notebook's `id` and `displayName`.
-
 ### Create a section
 
 ```bash
 $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_create_section.py" --notebook-id "NOTEBOOK_ID" --name "My Section"
 ```
-
-Returns JSON with the new section's `id` and `displayName`.
 
 ### Create a page
 
@@ -113,8 +98,6 @@ For longer content, use `--stdin`:
 echo "# My Page\n\nContent here" | $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_create_page.py" --section-id "SECTION_ID" --title "Page Title" --stdin
 ```
 
-Returns JSON with the new page's `id`, `title`, and `contentUrl`.
-
 ### Update a page
 
 ```bash
@@ -125,37 +108,32 @@ Actions: `append` (add to end), `replace` (replace body), `insert` (insert at po
 
 ## Workflow Patterns
 
-### Browse notebooks → read a page
+### Browse → read
 
-1. List notebooks to find the right one
-2. List sections in that notebook
-3. List pages in the target section
-4. Read the specific page
+1. List sections in notebook (use known ID if possible)
+2. List pages in target section
+3. Read the specific page
 
-### Create a note from scratch
+### Create a note
 
-1. List notebooks to find where to put the note (or create a new notebook)
-2. List sections (or create a new section)
-3. Create the page with the content
+1. List sections (or create a new one)
+2. Create the page with content
 
-### Add content to an existing page
+### Append to existing page
 
-1. Navigate to the page (list notebooks → sections → pages)
-2. Optionally read the page first to see current content
-3. Use update with `--action append` to add content
+1. Navigate to the page (sections → pages)
+2. Use update with `--action append`
 
 ## Error Handling
 
-All scripts output JSON errors to stderr on failure:
+All scripts output JSON. Common errors:
 
-- **Not authenticated**: `{"error": "..."}` — run `auth_login.py` first
-- **Missing config**: Check that `.env` exists with `MSGRAPH_CLIENT_ID`
-- **Permission denied**: The Azure app registration may need additional API permissions
-- **Not found**: The notebook/section/page ID may be invalid — re-list to get current IDs
-- **Token expired**: Run `auth_login.py` to re-authenticate
+- **Auth expired**: Run `auth_login.py` for device code re-auth
+- **Not found (404)**: Re-list to get current IDs
+- **Permission denied (403)**: Check Azure app API permissions
 
 ## Reference
 
-For detailed API information and edge cases, see:
-- `references/onenote-api.md` in the msgraph repo — full API details
-- `references/azure-setup.md` in the msgraph repo — Azure app registration walkthrough
+For API details and edge cases, see:
+- `references/onenote-api.md` — full API reference
+- `references/azure-setup.md` — Azure app registration walkthrough
