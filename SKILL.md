@@ -1,15 +1,6 @@
 ---
 name: msgraph
 description: Access Microsoft OneNote notebooks — read, create, and update notes via Microsoft Graph API
-triggers:
-  - OneNote
-  - notebooks
-  - notes
-  - Microsoft notes
-  - create a note
-  - read my notes
-  - list notebooks
-  - onenote
 ---
 
 # Microsoft Graph — OneNote
@@ -31,17 +22,21 @@ If the user has not authenticated yet, run the auth login script first.
 All scripts are in the msgraph repo. Use this base path:
 
 ```
-MSGRAPH_DIR="$HOME/Library/CloudStorage/OneDrive-Personal/Documents/development/myopenclaw/msgraph"
+MSGRAPH_DIR="/home/bneradt/openclaw/skills/msgraph"
 ```
 
-Scripts auto-detect and use the repo's `.venv` Python if available.
+Scripts use the repo's `.venv` Python. Always invoke scripts with:
+
+```bash
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/<script>.py"
+```
 
 ## Authentication
 
 ### Check auth status
 
 ```bash
-python3 "$MSGRAPH_DIR/scripts/auth_status.py"
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/auth_status.py"
 ```
 
 Returns JSON: `{"authenticated": true, "username": "...", ...}` or `{"authenticated": false, "reason": "..."}`.
@@ -49,10 +44,10 @@ Returns JSON: `{"authenticated": true, "username": "...", ...}` or `{"authentica
 ### Log in (device code flow)
 
 ```bash
-python3 "$MSGRAPH_DIR/scripts/auth_login.py"
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/auth_login.py"
 ```
 
-Prints a URL and code to stderr. Tell the user to open the URL in their browser and enter the code. The script prints JSON with the authenticated username on success. Tokens are cached in the macOS Keychain — subsequent commands authenticate silently.
+Prints a URL and code to stderr. Tell the user to open the URL in their browser and enter the code. The script prints JSON with the authenticated username on success. Tokens are cached persistently — subsequent commands authenticate silently.
 
 Always check auth status before running OneNote commands. If not authenticated, run the login script first and wait for the user to complete the browser flow.
 
@@ -61,7 +56,7 @@ Always check auth status before running OneNote commands. If not authenticated, 
 ### List notebooks
 
 ```bash
-python3 "$MSGRAPH_DIR/scripts/onenote_list_notebooks.py"
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_list_notebooks.py"
 ```
 
 Returns JSON array of notebooks with `id`, `displayName`, `createdDateTime`, `lastModifiedDateTime`.
@@ -69,7 +64,7 @@ Returns JSON array of notebooks with `id`, `displayName`, `createdDateTime`, `la
 ### List sections in a notebook
 
 ```bash
-python3 "$MSGRAPH_DIR/scripts/onenote_list_sections.py" --notebook-id "NOTEBOOK_ID"
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_list_sections.py" --notebook-id "NOTEBOOK_ID"
 ```
 
 Returns JSON array of sections with `id`, `displayName`, `createdDateTime`.
@@ -77,7 +72,7 @@ Returns JSON array of sections with `id`, `displayName`, `createdDateTime`.
 ### List pages in a section
 
 ```bash
-python3 "$MSGRAPH_DIR/scripts/onenote_list_pages.py" --section-id "SECTION_ID"
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_list_pages.py" --section-id "SECTION_ID"
 ```
 
 Returns JSON array of pages with `id`, `title`, `createdDateTime`, `lastModifiedDateTime`.
@@ -85,7 +80,7 @@ Returns JSON array of pages with `id`, `title`, `createdDateTime`, `lastModified
 ### Read a page
 
 ```bash
-python3 "$MSGRAPH_DIR/scripts/onenote_read_page.py" --page-id "PAGE_ID"
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_read_page.py" --page-id "PAGE_ID"
 ```
 
 Returns JSON with page metadata plus a `content` field containing the page body as Markdown.
@@ -93,7 +88,7 @@ Returns JSON with page metadata plus a `content` field containing the page body 
 ### Create a notebook
 
 ```bash
-python3 "$MSGRAPH_DIR/scripts/onenote_create_notebook.py" --name "My Notebook"
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_create_notebook.py" --name "My Notebook"
 ```
 
 Returns JSON with the new notebook's `id` and `displayName`.
@@ -101,7 +96,7 @@ Returns JSON with the new notebook's `id` and `displayName`.
 ### Create a section
 
 ```bash
-python3 "$MSGRAPH_DIR/scripts/onenote_create_section.py" --notebook-id "NOTEBOOK_ID" --name "My Section"
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_create_section.py" --notebook-id "NOTEBOOK_ID" --name "My Section"
 ```
 
 Returns JSON with the new section's `id` and `displayName`.
@@ -109,13 +104,13 @@ Returns JSON with the new section's `id` and `displayName`.
 ### Create a page
 
 ```bash
-python3 "$MSGRAPH_DIR/scripts/onenote_create_page.py" --section-id "SECTION_ID" --title "Page Title" --content "Markdown content here"
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_create_page.py" --section-id "SECTION_ID" --title "Page Title" --content "Markdown content here"
 ```
 
 For longer content, use `--stdin`:
 
 ```bash
-echo "# My Page\n\nContent here" | python3 "$MSGRAPH_DIR/scripts/onenote_create_page.py" --section-id "SECTION_ID" --title "Page Title" --stdin
+echo "# My Page\n\nContent here" | $MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_create_page.py" --section-id "SECTION_ID" --title "Page Title" --stdin
 ```
 
 Returns JSON with the new page's `id`, `title`, and `contentUrl`.
@@ -123,7 +118,7 @@ Returns JSON with the new page's `id`, `title`, and `contentUrl`.
 ### Update a page
 
 ```bash
-python3 "$MSGRAPH_DIR/scripts/onenote_update_page.py" --page-id "PAGE_ID" --action append --content "New content to add"
+$MSGRAPH_DIR/.venv/bin/python3 "$MSGRAPH_DIR/scripts/onenote_update_page.py" --page-id "PAGE_ID" --action append --content "New content to add"
 ```
 
 Actions: `append` (add to end), `replace` (replace body), `insert` (insert at position). Content can be Markdown or HTML — Markdown is auto-converted.
