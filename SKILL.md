@@ -7,6 +7,10 @@ description: Access Microsoft OneNote notebooks — read, create, and update not
 
 Access the user's Microsoft OneNote notebooks through lightweight HTTP calls to the Microsoft Graph API. All content is converted between OneNote HTML and Markdown automatically.
 
+## ⚠️ Safety — Do Not Delete Without Confirmation
+
+**NEVER delete any notebooks, sections, or pages without explicit confirmation from the user.** Many of these notes are shared with his wife and family. Some contain years of important information. Deleting the wrong thing could cause real harm. Always ask before any destructive action — no exceptions.
+
 ## Script Location
 
 ```
